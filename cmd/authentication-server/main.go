@@ -22,17 +22,28 @@ import (
 func main() {
 
 	otpFn := flag.String("otp-secret-file", "", "The name of the file holding the otp secret")
+	assetsDir := flag.String("assets-dir", "", "The name of the directory containing html assets")
 	flag.Parse()
 
+	// Check flags {
 	if otpFn == nil || *otpFn == "" {
 		panic("The --otp-secret-file must be passed")
 	}
+	if assetsDir == nil || *assetsDir == "" {
+		panic("The assets directory must be specified")
+	}
+	// }
+
 	authenticator, err := NewOtpAuthenticator(*otpFn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	jsonWebKey := generateJsonWebKey()
+
+	fileServer := http.FileServer(http.Dir(*assetsDir))
+
+	http.Handle("/", fileServer)
 
 	// Define the HTTP handlers
 	http.HandleFunc(
