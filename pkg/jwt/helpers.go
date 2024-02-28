@@ -1,4 +1,4 @@
-package main
+package jwt
 
 import (
 	"crypto/rand"
@@ -7,21 +7,28 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-func generateJsonWebKey() jose.JSONWebKey {
+func GenerateJsonWebKey() jose.JSONWebKey {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}
-	kId := "my_rsa_key"
 
 	return jose.JSONWebKey{
 		Algorithm: string(jose.PS512),
 		Key:       key,
-		KeyID:     kId,
+		KeyID:     KeyId,
 	}
 }
 
-func webKeyToSigner(webKey jose.JSONWebKey) jose.Signer {
+func ExtractPublicJsonWebKey(privateKey jose.JSONWebKey) jose.JSONWebKey {
+	return jose.JSONWebKey{
+		Algorithm: privateKey.Algorithm,
+		Key:       &privateKey.Key.(*rsa.PrivateKey).PublicKey,
+		KeyID:     privateKey.KeyID,
+	}
+}
+
+func WebKeyToSigner(webKey jose.JSONWebKey) jose.Signer {
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
 			Algorithm: jose.SignatureAlgorithm(webKey.Algorithm),
@@ -35,7 +42,7 @@ func webKeyToSigner(webKey jose.JSONWebKey) jose.Signer {
 	return signer
 }
 
-func createKeySet(webKeys ...jose.JSONWebKey) jose.JSONWebKeySet {
+func CreateKeySet(webKeys ...jose.JSONWebKey) jose.JSONWebKeySet {
 	return jose.JSONWebKeySet{
 		Keys: webKeys,
 	}

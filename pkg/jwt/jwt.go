@@ -14,15 +14,13 @@ JWT Issuance Endpoint:
     in the response body, along with additional information such as token type,
     expiration time, etc.
 */
-package main
+package jwt
 
 import (
-	"io"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/xlzd/gotp"
+	"github.com/renan-campos/auth-server/pkg/otp"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -31,9 +29,9 @@ type Authenticator interface {
 	authenticate(r *http.Request) (valid bool, err error)
 }
 
-func generateTokenIssuer(
+func GenerateTokenIssuer(
 	signer jose.Signer,
-	authenticator Authenticator,
+	authenticator otp.HttpVerifier,
 ) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Only allow POST requests
@@ -42,7 +40,7 @@ func generateTokenIssuer(
 			return
 		}
 
-		valid, err := authenticator.authenticate(r)
+		valid, err := authenticator.VerifyHttpRequest(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -53,11 +51,13 @@ func generateTokenIssuer(
 		}
 
 		cl := jwt.Claims{
-			Subject:  "demo-token",
-			Issuer:   "authentication-server",
-			Audience: jwt.Audience{"demo-client"},
+			Subject:  Subject,
+			Issuer:   Issuer,
+			Audience: jwt.Audience{IntendedAudience},
 			// Have the token expire in an hour
 			Expiry: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			// A second is subtracted from the issed at time, to avoid issued in future errors
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 		}
 		token, err := jwt.Signed(signer).Claims(cl).CompactSerialize()
 		if err != nil {
@@ -68,33 +68,4 @@ func generateTokenIssuer(
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(token))
 	}
-}
-
-type otpAuthenticator struct {
-	totp *gotp.TOTP
-}
-
-func NewOtpAuthenticator(secretFileName string) (*otpAuthenticator, error) {
-	fp, err := os.Open(secretFileName)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := io.ReadAll(fp)
-	if err != nil {
-		return nil, err
-	}
-
-	// Note: Only the first 32 bytes of the file matters
-	return &otpAuthenticator{
-		totp: gotp.NewDefaultTOTP(string(out[:32])),
-	}, nil
-}
-
-func (a *otpAuthenticator) authenticate(r *http.Request) (valid bool, err error) {
-	otp, err := io.ReadAll(r.Body)
-	if err != nil {
-		return valid, err
-	}
-	return a.totp.VerifyTime(string(otp), time.Now()), nil
 }

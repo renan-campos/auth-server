@@ -17,6 +17,9 @@ import (
 	"flag"
 	"log"
 	"net/http"
+
+	"github.com/renan-campos/auth-server/pkg/jwt"
+	"github.com/renan-campos/auth-server/pkg/otp"
 )
 
 func main() {
@@ -34,12 +37,12 @@ func main() {
 	}
 	// }
 
-	authenticator, err := NewOtpAuthenticator(*otpFn)
+	authenticator, err := otp.NewAuthenticator(*otpFn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	jsonWebKey := generateJsonWebKey()
+	jsonWebKey := jwt.GenerateJsonWebKey()
 
 	fileServer := http.FileServer(http.Dir(*assetsDir))
 
@@ -48,16 +51,16 @@ func main() {
 	// Define the HTTP handlers
 	http.HandleFunc(
 		"/token",
-		generateTokenIssuer(
-			webKeyToSigner(jsonWebKey),
+		jwt.GenerateTokenIssuer(
+			jwt.WebKeyToSigner(jsonWebKey),
 			authenticator,
 		),
 	)
 
 	http.HandleFunc(
 		"/jwks",
-		generateJsonWebKeysRequestHandler(
-			createKeySet(jsonWebKey),
+		jwt.GenerateJsonWebKeysRequestHandler(
+			jwt.CreateKeySet(jwt.ExtractPublicJsonWebKey(jsonWebKey)),
 		),
 	)
 

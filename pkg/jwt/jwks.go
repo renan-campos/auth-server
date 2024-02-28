@@ -13,7 +13,7 @@ JWKS Endpoint:
   - This endpoint is often associated with OAuth 2.0 and OpenID Connect
     implementations.
 */
-package main
+package jwt
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-func generateJsonWebKeysRequestHandler(
+func GenerateJsonWebKeysRequestHandler(
 	webKeySet jose.JSONWebKeySet,
 ) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
