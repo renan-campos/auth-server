@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func GenerateJsonWebKey() jose.JSONWebKey {
@@ -46,4 +47,18 @@ func CreateKeySet(webKeys ...jose.JSONWebKey) jose.JSONWebKeySet {
 	return jose.JSONWebKeySet{
 		Keys: webKeys,
 	}
+}
+
+func NewClaims(claimData ClaimData) jwt.Claims {
+	return jwt.Claims{
+		Subject:  claimData.Subject,
+		Issuer:   claimData.Issuer,
+		Audience: jwt.Audience{claimData.Audience},
+		Expiry:   jwt.NewNumericDate(claimData.Expiry),
+		IssuedAt: jwt.NewNumericDate(claimData.IssuedAt),
+	}
+}
+
+func CreateToken(signer jose.Signer, claims jwt.Claims) (string, error) {
+	return jwt.Signed(signer).Claims(claims).CompactSerialize()
 }
