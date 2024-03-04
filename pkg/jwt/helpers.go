@@ -3,6 +3,9 @@ package jwt
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
+	"io"
+	"os"
 
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -19,6 +22,21 @@ func GenerateJsonWebKey() jose.JSONWebKey {
 		Key:       key,
 		KeyID:     KeyId,
 	}
+}
+
+func KeyFromJson(jsonFileName string) (jose.JSONWebKey, error) {
+	var out jose.JSONWebKey
+	fp, err := os.Open(jsonFileName)
+	if err != nil {
+		return out, err
+	}
+	defer fp.Close()
+	data, err := io.ReadAll(fp)
+	if err != nil {
+		return out, err
+	}
+	json.Unmarshal(data, &out)
+	return out, nil
 }
 
 func ExtractPublicJsonWebKey(privateKey jose.JSONWebKey) jose.JSONWebKey {
