@@ -3,7 +3,9 @@ package jwt
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"io"
 	"os"
 
@@ -37,6 +39,33 @@ func KeyFromJson(jsonFileName string) (jose.JSONWebKey, error) {
 	}
 	json.Unmarshal(data, &out)
 	return out, nil
+}
+
+func KeyFromPemFile(pemFileName string) (jose.JSONWebKey, error) {
+	var out jose.JSONWebKey
+
+	fp, err := os.Open(pemFileName)
+	if err != nil {
+		return out, err
+	}
+	pemData, err := io.ReadAll(fp)
+	if err != nil {
+		return out, err
+	}
+	pemBlock, _ := pem.Decode(pemData)
+	if pemBlock == nil || pemBlock.Type != "RSA PRIVATE KEY" {
+		return out, err
+	}
+
+	key, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	if err != nil {
+		return out, err
+	}
+	return jose.JSONWebKey{
+		Algorithm: string(jose.PS256),
+		Key:       key,
+		KeyID:     "NPal4M9u9jYj3arqXLG6X1xEjz-BRU3qglt5taMlbRY",
+	}, nil
 }
 
 func ExtractPublicJsonWebKey(privateKey jose.JSONWebKey) jose.JSONWebKey {
