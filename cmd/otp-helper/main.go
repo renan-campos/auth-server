@@ -56,6 +56,6 @@ func NewOtpAuthenticator(secretFileName string) (*otpAuthenticator, error) {
 	}
 
 	return &otpAuthenticator{
-		totp: gotp.NewDefaultTOTP(string(out[:32])),
+		totp: gotp.NewDefaultTOTP(string(out)),
 	}, nil
 }
