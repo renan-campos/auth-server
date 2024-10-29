@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/renan-campos/auth-server/pkg/otp"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -29,9 +28,13 @@ type Authenticator interface {
 	authenticate(r *http.Request) (valid bool, err error)
 }
 
+type HttpVerifier interface {
+	VerifyHttpRequest(r *http.Request) (valid bool, err error)
+}
+
 func GenerateTokenIssuer(
 	signer jose.Signer,
-	authenticator otp.HttpVerifier,
+	authenticator HttpVerifier,
 ) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Only allow POST requests

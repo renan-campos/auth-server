@@ -24,7 +24,7 @@ import (
 
 func main() {
 
-	otpFn := flag.String("otp-secret-file", "", "The name of the file holding the otp secret")
+	otpFn := flag.String("otp-secret-file", "", "The name of the file holding a base32-encoded secret")
 	assetsDir := flag.String("assets-dir", "", "The name of the directory containing html assets")
 	flag.Parse()
 

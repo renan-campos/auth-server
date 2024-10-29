@@ -1,32 +1,59 @@
 package otp
 
 import (
+	"encoding/base32"
 	"io"
 	"net/http"
 	"os"
 	"time"
+	"fmt"
 
 	"github.com/xlzd/gotp"
 )
 
-func NewAuthenticator(secretFileName string) (*Authenticator, error) {
-	fp, err := os.Open(secretFileName)
+type authenticator struct {
+	totp *gotp.TOTP
+}
+
+func NewAuthenticator(secretFileName string) (Authenticator, error) {
+	secret, err := extractSecretFromFile(secretFileName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to extract secret from file: %v", err)
 	}
 
-	out, err := io.ReadAll(fp)
-	if err != nil {
-		return nil, err
+	if err := validateSecret(secret); err != nil {
+		return nil, fmt.Errorf("invalid secret: %v", err)
 	}
 
-	// Note: Only the first 32 bytes of the file matters
-	return &Authenticator{
-		totp: gotp.NewDefaultTOTP(string(out[:32])),
+	return &authenticator{
+		totp: gotp.NewDefaultTOTP(secret),
 	}, nil
 }
 
-func (a *Authenticator) VerifyHttpRequest(r *http.Request) (valid bool, err error) {
+func extractSecretFromFile(secretFileName string) (string, error) {
+	fp, err := os.Open(secretFileName)
+	if err != nil {
+		return "", err
+	}
+	defer fp.Close()
+
+	out, err := io.ReadAll(fp)
+	if err != nil {
+		return "", err
+	}
+
+	return string(out), nil
+}
+
+func validateSecret(secret string) error {
+	// The current implementation expects the secret to be a valid base32 encoded string.
+	if _, err := base32.StdEncoding.DecodeString(secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *authenticator) VerifyHttpRequest(r *http.Request) (valid bool, err error) {
 	otp, err := io.ReadAll(r.Body)
 	if err != nil {
 		return valid, err
@@ -34,6 +61,6 @@ func (a *Authenticator) VerifyHttpRequest(r *http.Request) (valid bool, err erro
 	return a.totp.VerifyTime(string(otp), time.Now()), nil
 }
 
-func (a *Authenticator) CurrentToken() string {
+func (a *authenticator) CurrentToken() string {
 	return a.totp.Now()
 }
