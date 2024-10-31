@@ -1,20 +1,71 @@
-all: bin/authentication-server bin/client bin/single-use-token bin/token-generator bin/pem-to-jwk
+# Binary make targets {
+# Define variables
+BINDIR := bin
+SRCDIR := cmd
+PKGDIR := pkg
 
-bin/authentication-server: cmd/authentication-server/*.go
-	go build -o bin/authentication-server cmd/authentication-server/*.go
+# Find all Go source files in the cmd directory
+SOURCES := $(wildcard $(SRCDIR)/*)
 
-bin/client: cmd/client/*.go 
-	go build -o bin/client cmd/client/*.go
+# Find all Go source files in the pkg directory
+PACKAGES := $(wildcard $(PKGDIR)/*)
 
-bin/single-use-token: cmd/single-use-token/*.go
-	go build -o bin/single-use-token cmd/single-use-token/*.go
+# Define the executables to be created
+EXECUTABLES := $(patsubst $(SRCDIR)/%, $(BINDIR)/%, $(SOURCES))
 
-bin/token-generator: cmd/token-generator/*.go
-	go build -o bin/token-generator cmd/token-generator/*.go
+# Default target
+all: $(EXECUTABLES)
 
-bin/pem-to-jwk: cmd/pem-to-jwk/*.go
-	go build -o bin/pem-to-jwk cmd/pem-to-jwk/*.go
+# Rule to build each executable
+$(BINDIR)/%: $(SRCDIR)/% $(PACKAGES)
+	@mkdir -p $(BINDIR)
+	go build -o $@ ./$<
 
-.PHONY: clean
+# Clean up binaries
 clean:
-	rm bin/*
+	rm -rf $(BINDIR)
+
+# PHONY targets
+.PHONY: all clean
+
+# Binary make targets }
+
+
+# Container make targets {
+CONTAINER_ENGINE := podman
+IMAGE_NAME ?= authentication-server
+REGISTRY ?=
+REPOSITORY ?= localhost
+TAG ?= latest
+
+
+HOST_PORT := 8008
+CONTAINER_PORT :=8008
+
+VOLUME_NAME := authentication-server-data
+VOLUME_MOUNT := /mnt/
+
+# Build IMAGE_TAG dynamically based on which variables are set
+IMAGE_TAG := $(if $(REGISTRY),$(REGISTRY)/)$(if $(REPOSITORY),$(REPOSITORY)/)$(IMAGE_NAME)$(if $(TAG),:$(TAG))
+
+.PHONY: build-image clean-containers container-volume clean-volume run-container-foreground
+
+build-image:
+	$(CONTAINER_ENGINE) build -t $(IMAGE_TAG) .
+
+clean-containers:
+	$(CONTAINER_ENGINE) system prune -f
+
+volume:
+	$(CONTAINER_ENGINE) volume create $(VOLUME_NAME)
+	tar -cf assets.tar assets/
+	$(CONTAINER_ENGINE) volume import $(VOLUME_NAME) assets.tar
+	rm assets.tar
+
+clean-volume:
+	$(CONTAINER_ENGINE) volume rm $(VOLUME_NAME)
+
+run-container-foreground:
+	$(CONTAINER_ENGINE) run --rm -p $(HOST_PORT):$(CONTAINER_PORT) -v $(VOLUME_NAME):$(VOLUME_MOUNT) $(IMAGE_TAG)
+
+# Container make targets }
