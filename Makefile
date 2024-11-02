@@ -39,8 +39,8 @@ REPOSITORY ?= localhost
 TAG ?= latest
 
 
-HOST_PORT := 8008
-CONTAINER_PORT :=8008
+HOST_PORT := 8080
+CONTAINER_PORT :=8080
 
 VOLUME_NAME := authentication-server-data
 VOLUME_MOUNT := /mnt/

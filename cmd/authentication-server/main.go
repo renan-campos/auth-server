@@ -65,6 +65,6 @@ func main() {
 	)
 
 	// Start the HTTP server
-	log.Println("Athentication Server started on port 8008")
-	log.Fatal(http.ListenAndServe(":8008", nil))
+	log.Println("Athentication Server started on port 8080")
+	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
 }

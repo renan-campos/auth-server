@@ -13,4 +13,5 @@ RUN CGO_ENABLED=0 make bin/authentication-server
 # Now copy it into our base image.
 FROM gcr.io/distroless/static-debian12
 COPY --from=build /go/src/app/bin/authentication-server /
+EXPOSE 8080/tcp
 CMD ["/authentication-server", "--otp-secret-file" , "/mnt/assets/secret", "--assets-dir", "/mnt/assets/static/"]
